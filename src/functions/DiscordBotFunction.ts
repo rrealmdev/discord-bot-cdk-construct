@@ -1,11 +1,11 @@
-import {Context, Callback} from 'aws-lambda';
-import {IDiscordEventRequest} from '../types';
-import {getDiscordSecrets} from './utils/DiscordSecrets';
-import {Lambda} from 'aws-sdk';
-import {commandLambdaARN} from './constants/EnvironmentProps';
-import {sign} from 'tweetnacl';
+import { Context, Callback } from 'aws-lambda'
+import { IDiscordEventRequest } from '../types'
+import { getDiscordSecrets } from './utils/DiscordSecrets'
+import { Lambda } from 'aws-sdk'
+import { commandLambdaARN } from './constants/EnvironmentProps'
+import { sign } from 'tweetnacl'
 
-const lambda = new Lambda();
+const lambda = new Lambda()
 
 /**
  * Handles incoming events from the Discord bot.
@@ -14,11 +14,14 @@ const lambda = new Lambda();
  * @param {Callback} _callback A callback to handle the request.
  * @return {IDiscordEventResponse} Returns a response to send back to Discord.
  */
-export async function handler(event: IDiscordEventRequest, _context: Context,
-    _callback: Callback) {
-  console.log(`Received event: ${JSON.stringify(event)}`);
+export async function handler(
+  event: IDiscordEventRequest,
+  _context: Context,
+  _callback: Callback
+) {
+  console.log(`Received event: ${JSON.stringify(event)}`)
 
-  const verifyPromise = verifyEvent(event);
+  const verifyPromise = verifyEvent(event)
 
   if (event) {
     switch (event.jsonBody.type) {
@@ -27,16 +30,18 @@ export async function handler(event: IDiscordEventRequest, _context: Context,
         if (await verifyPromise) {
           return {
             type: 1,
-          };
+          }
         }
-        break;
+        break
       case 2:
         // Invoke the lambda to respond to the deferred message.
-        const lambdaPromise = lambda.invoke({
-          FunctionName: commandLambdaARN,
-          Payload: JSON.stringify(event),
-          InvocationType: 'Event',
-        }).promise();
+        const lambdaPromise = lambda
+          .invoke({
+            FunctionName: commandLambdaARN,
+            Payload: JSON.stringify(event),
+            InvocationType: 'Event',
+          })
+          .promise()
 
         // Call of the promises and ACK the interaction.
         // Note that all responses are deferred to meet Discord's 3 second
@@ -44,13 +49,32 @@ export async function handler(event: IDiscordEventRequest, _context: Context,
         if (await Promise.all([verifyPromise, lambdaPromise])) {
           return {
             type: 5,
-          };
+          }
         }
-        break;
+        break
+      case 3:
+        // Invoke the lambda to respond to the deferred message.
+        const lambdaPromise2 = lambda
+          .invoke({
+            FunctionName: commandLambdaARN,
+            Payload: JSON.stringify(event),
+            InvocationType: 'Event',
+          })
+          .promise()
+
+        // Call of the promises and ACK the interaction.
+        // Note that all responses are deferred to meet Discord's 3 second
+        // response time requirement.
+        if (await Promise.all([verifyPromise, lambdaPromise2])) {
+          return {
+            type: 5,
+          }
+        }
+        break
     }
   }
 
-  throw new Error('[UNAUTHORIZED] invalid request signature');
+  throw new Error('[UNAUTHORIZED] invalid request signature')
 }
 
 /**
@@ -58,17 +82,19 @@ export async function handler(event: IDiscordEventRequest, _context: Context,
  * @param {IDiscordEventRequest} event The event to verify from Discord.
  * @return {boolean} Returns true if the event was verified, false otherwise.
  */
-export async function verifyEvent(event: IDiscordEventRequest): Promise<boolean> {
+export async function verifyEvent(
+  event: IDiscordEventRequest
+): Promise<boolean> {
   try {
-    const discordSecrets = await getDiscordSecrets();
+    const discordSecrets = await getDiscordSecrets()
     const isVerified = sign.detached.verify(
-        Buffer.from(event.timestamp + JSON.stringify(event.jsonBody)),
-        Buffer.from(event.signature, 'hex'),
-        Buffer.from(discordSecrets?.publicKey ?? '', 'hex'),
-    );
-    return isVerified;
+      Buffer.from(event.timestamp + JSON.stringify(event.jsonBody)),
+      Buffer.from(event.signature, 'hex'),
+      Buffer.from(discordSecrets?.publicKey ?? '', 'hex')
+    )
+    return isVerified
   } catch (exception) {
-    console.log(exception);
-    return false;
+    console.log(exception)
+    return false
   }
 }
