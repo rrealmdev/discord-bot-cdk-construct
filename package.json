@@ -1,11 +1,14 @@
 {
-  "name": "discord-bot-cdk-construct",
+  "name": "com.everyrealm.discord-bot-cdk-construct",
   "version": "0.3.3",
   "description": "A quick CDK Construct for creating a serverless Discord bot in AWS!",
-  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@rrealmdev"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GEMISIS/discord-bot-cdk-construct.git"
+    "url": "https://github.com/rrealmdev/discord-bot-cdk-construct",
+    "directory": "com.everyrealm.discord-bot-cdk-construct"
   },
   "author": {
     "name": "Gerald McAlister",

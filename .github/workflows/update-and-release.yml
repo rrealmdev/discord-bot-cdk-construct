@@ -1,0 +1,22 @@
+name: Publish Package
+on:
+  release:
+    types: [created]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # # Inject environment variables (just repository level for now)
+      - name: add variables
+        run: echo EVENTS_URL="${{ secrets.EVENTS_URL }}" >> .env
+      # Setup .npmrc file to publish to GitHub Packages
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@everyrealm' # Defaults to the user or organization that owns the workflow file
+      - run: npm i && tsc && npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # not a repository secret.  Automatically injected from Github Action
+          GH_PAT: ${{ secrets.GH_PAT }}
