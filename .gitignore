@@ -111,7 +111,3 @@ dist
 # CDK asset staging directory
 .cdk.staging
 cdk.out
-
-# JSII ignores
-build
-tsconfig.json
