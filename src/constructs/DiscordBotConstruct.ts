@@ -50,7 +50,9 @@ export class DiscordBotConstruct extends Construct {
 
     // Create our Secrets for our Discord APIs.
     for (const dID of props.discordApplicationIDs) {
-      const newSecret = new Secret(this, `${API_KEY_PREFIX}${dID}`)
+      const newSecret = new Secret(this, `secret-${API_KEY_PREFIX}${dID}`, {
+        secretName: `${API_KEY_PREFIX}${dID}`,
+      })
       this.discordAPISecrets.push(newSecret)
       newSecret.grantRead(discordBotLambda)
       newSecret.grantRead(props.commandsLambdaFunction)
