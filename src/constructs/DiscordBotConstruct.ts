@@ -1,17 +1,18 @@
-import {Duration} from 'aws-cdk-lib';
-import {Function, Runtime} from 'aws-cdk-lib/aws-lambda';
-import {Cors, LambdaIntegration, RequestValidator, RestApi} from 'aws-cdk-lib/aws-apigateway';
-import {NodejsFunction} from 'aws-cdk-lib/aws-lambda-nodejs';
-import {Secret} from 'aws-cdk-lib/aws-secretsmanager';
-import {Construct} from 'constructs';
-import * as path from 'path';
+import { Duration } from 'aws-cdk-lib'
+import { Function, Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Cors, LambdaIntegration, RequestValidator, RestApi } from 'aws-cdk-lib/aws-apigateway'
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
+import { Construct } from 'constructs'
+import * as path from 'path'
 
 /**
  * The properties required for the Discord Bot construct. Specifically
  * requires the Lambda function where commands will be sent.
  */
 export interface IDiscordBotConstructProps {
-  commandsLambdaFunction: Function;
+  commandsLambdaFunction: Function
+  discordApplicationIDs: string[]
 }
 
 /**
@@ -21,7 +22,7 @@ export class DiscordBotConstruct extends Construct {
   /**
    * The Secrets for our Discord APIs.
    */
-  public readonly discordAPISecrets: Secret;
+  public readonly discordAPISecrets: Secret[] = []
 
   /**
    * The constructor for building the stack.
@@ -30,10 +31,9 @@ export class DiscordBotConstruct extends Construct {
    * @param {IDiscordBotConstructProps} props The properties to configure the Construct.
    */
   constructor(scope: Construct, id: string, props: IDiscordBotConstructProps) {
-    super(scope, id);
+    super(scope, id)
 
-    // Create our Secrets for our Discord APIs.
-    this.discordAPISecrets = new Secret(this, 'discord-bot-api-key');
+    const API_KEY_PREFIX = 'discord-api-key-for-app-'
 
     // Create the Lambda for handling Interactions from our Discord bot.
     const discordBotLambda = new NodejsFunction(this, 'discord-bot-lambda', {
@@ -41,44 +41,47 @@ export class DiscordBotConstruct extends Construct {
       entry: path.join(__dirname, '../functions/DiscordBotFunction.js'),
       handler: 'handler',
       environment: {
-        DISCORD_BOT_API_KEY_NAME: this.discordAPISecrets.secretName,
+        DISCORD_BOT_API_KEY_PREFIX: API_KEY_PREFIX,
         COMMAND_LAMBDA_ARN: props.commandsLambdaFunction.functionArn,
       },
       timeout: Duration.seconds(3),
-    });
-    props.commandsLambdaFunction.addEnvironment(
-        'DISCORD_BOT_API_KEY_NAME', this.discordAPISecrets.secretName);
+    })
+    props.commandsLambdaFunction.addEnvironment('DISCORD_BOT_API_KEY_PREFIX', API_KEY_PREFIX)
 
-    this.discordAPISecrets.grantRead(discordBotLambda);
-    this.discordAPISecrets.grantRead(props.commandsLambdaFunction);
-    props.commandsLambdaFunction.grantInvoke(discordBotLambda);
+    // Create our Secrets for our Discord APIs.
+    for (const dID of props.discordApplicationIDs) {
+      const newSecret = new Secret(this, `${API_KEY_PREFIX}${dID}`)
+      this.discordAPISecrets.push(newSecret)
+      newSecret.grantRead(discordBotLambda)
+      newSecret.grantRead(props.commandsLambdaFunction)
+    }
+    props.commandsLambdaFunction.grantInvoke(discordBotLambda)
 
     // Create our API Gateway
     const discordBotAPI = new RestApi(this, 'discord-bot-api', {
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
       },
-    });
+    })
     const discordBotAPIValidator = new RequestValidator(this, 'discord-bot-api-validator', {
       restApi: discordBotAPI,
       validateRequestBody: true,
       validateRequestParameters: true,
-    });
+    })
 
     // User authentication endpoint configuration
     const discordBotEventItems = discordBotAPI.root.addResource('event', {
       defaultCorsPreflightOptions: {
-        allowOrigins: [
-          '*',
-        ],
+        allowOrigins: ['*'],
       },
-    });
+    })
 
     // Transform our requests and responses as appropriate.
     const discordBotIntegration: LambdaIntegration = new LambdaIntegration(discordBotLambda, {
       proxy: false,
       requestTemplates: {
-        'application/json': '{\r\n\
+        'application/json':
+          '{\r\n\
               "timestamp": "$input.params(\'x-signature-timestamp\')",\r\n\
               "signature": "$input.params(\'x-signature-ed25519\')",\r\n\
               "jsonBody" : $input.json(\'$\')\r\n\
@@ -96,7 +99,7 @@ export class DiscordBotConstruct extends Construct {
           },
         },
       ],
-    });
+    })
 
     // Add a POST method for the Discord APIs.
     discordBotEventItems.addMethod('POST', discordBotIntegration, {
@@ -110,6 +113,6 @@ export class DiscordBotConstruct extends Construct {
           statusCode: '401',
         },
       ],
-    });
+    })
   }
 }

@@ -1,26 +1,18 @@
 {
   "env": {
     "browser": true,
-    "es2021": true
+    "commonjs": true,
+    "es2021": true,
+    "jest": true,
   },
-  "extends": [
-    "google"
-  ],
-  "parser": "@typescript-eslint/parser",
+  "extends": ["standard", "prettier"],
   "parserOptions": {
-    "ecmaVersion": 12,
-    "sourceType": "module"
+    "ecmaVersion": "latest",
   },
-  "plugins": [
-    "@typescript-eslint"
-  ],
   "rules": {
-    "max-len": [
-      "error",
-      {
-        "code": 100
-      }
-    ],
-    "no-multi-str": "off"
-  }
+    "semi": ["error", "never"],
+    "quotes": [2, "single", { "avoidEscape": true }],
+    "no-tabs": ["error", { "allowIndentationTabs": false }],
+    "indent": ["error", 2]
+  },
 }
