@@ -1,6 +1,6 @@
 {
   "name": "com.everyrealm.discord-bot-cdk-construct",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "A quick CDK Construct for creating a serverless Discord bot in AWS!",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@rrealmdev"
