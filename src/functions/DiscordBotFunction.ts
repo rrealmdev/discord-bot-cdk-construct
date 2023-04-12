@@ -1,6 +1,6 @@
 import { Context, Callback } from 'aws-lambda'
 import { IDiscordEventRequest } from '../types'
-import { getDiscordSecrets } from './utils/DiscordSecrets'
+import { getDiscordSecrets, getDiscordSecretsById } from './utils/DiscordSecrets'
 import { Lambda } from 'aws-sdk'
 import { commandLambdaARN } from './constants/EnvironmentProps'
 import { sign } from 'tweetnacl'
@@ -14,11 +14,7 @@ const lambda = new Lambda()
  * @param {Callback} _callback A callback to handle the request.
  * @return {IDiscordEventResponse} Returns a response to send back to Discord.
  */
-export async function handler(
-  event: IDiscordEventRequest,
-  _context: Context,
-  _callback: Callback
-) {
+export async function handler(event: IDiscordEventRequest, _context: Context, _callback: Callback) {
   console.log(`Received event: ${JSON.stringify(event)}`)
 
   const verifyPromise = verifyEvent(event)
@@ -82,16 +78,11 @@ export async function handler(
  * @param {IDiscordEventRequest} event The event to verify from Discord.
  * @return {boolean} Returns true if the event was verified, false otherwise.
  */
-export async function verifyEvent(
-  event: IDiscordEventRequest
-): Promise<boolean> {
+export async function verifyEvent(event: IDiscordEventRequest): Promise<boolean> {
   try {
-    const discordSecrets = await getDiscordSecrets()
-    const isVerified = sign.detached.verify(
-      Buffer.from(event.timestamp + JSON.stringify(event.jsonBody)),
-      Buffer.from(event.signature, 'hex'),
-      Buffer.from(discordSecrets?.publicKey ?? '', 'hex')
-    )
+    //@ts-ignore
+    const discordSecrets = await getDiscordSecretsById(event.jsonBody.application_id)
+    const isVerified = sign.detached.verify(Buffer.from(event.timestamp + JSON.stringify(event.jsonBody)), Buffer.from(event.signature, 'hex'), Buffer.from(discordSecrets?.publicKey ?? '', 'hex'))
     return isVerified
   } catch (exception) {
     console.log(exception)
