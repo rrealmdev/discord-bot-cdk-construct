@@ -45,6 +45,7 @@ export class DiscordBotConstruct extends Construct {
         COMMAND_LAMBDA_ARN: props.commandsLambdaFunction.functionArn,
       },
       timeout: Duration.seconds(3),
+      retryAttempts: 0,
     })
     props.commandsLambdaFunction.addEnvironment('DISCORD_BOT_API_KEY_PREFIX', API_KEY_PREFIX)
 
